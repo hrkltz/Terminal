@@ -1,9 +1,10 @@
 name: terminal
-description: A new Flutter project.
+description: The launcher app for Scintilla.
 publish_to: 'none'
 version: 1.0.0+1
 environment:
   sdk: '>=2.19.0 <3.0.0'
+  flutter: '3.7.3'
 dependencies:
   flutter:
     sdk: flutter
