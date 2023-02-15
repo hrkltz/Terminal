@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_pty/flutter_pty.dart';
 import 'package:xterm/xterm.dart';
 
-
 void main() {
   runApp(const MyApp());
 }
@@ -38,39 +37,44 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final _terminal = Terminal(
-    maxLines: 10000,
-  );
+  final TerminalController _terminalController = TerminalController();
 
-  final _terminalController = TerminalController();
-  late final Pty pty;
+  Terminal _terminal =
+      Terminal(maxLines: 10000, platform: TerminalTargetPlatform.android);
+  Pty pty = Pty.start('sh');
 
   @override
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance.endOfFrame.then(
-      (_) {
-        if (mounted) _startPty();
-      },
-    );
+    WidgetsBinding.instance.endOfFrame.then((_) {
+      pty.kill(ProcessSignal.sigkill);
+      if (mounted) _startPty();
+    });
   }
-
 
   void _startPty() {
     pty = Pty.start(
-      Platform.isWindows ? 'cmd.exe' : 'sh',
+      'sh',
       columns: _terminal.viewWidth,
       rows: _terminal.viewHeight,
     );
 
     pty.output
         .cast<List<int>>()
-        .transform(Utf8Decoder())
+        .transform(const Utf8Decoder())
         .listen(_terminal.write);
 
     pty.exitCode.then((code) {
-      _terminal.write('the process exited with exit code $code');
+      var snackBar = SnackBar(content: Text('Terminal exited with $code'));
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+
+      setState(() {
+        _terminal =
+            Terminal(maxLines: 10000, platform: TerminalTargetPlatform.android);
+      });
+
+      _startPty();
     });
 
     _terminal.onOutput = (data) {
@@ -82,34 +86,34 @@ class _MyHomePageState extends State<MyHomePage> {
     };
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: TerminalView(
-          _terminal,
-          controller: _terminalController,
-          autofocus: true,
-          backgroundOpacity: 1.0,
-          /*onSecondaryTapDown: (details, offset) async {
-            final selection = _terminalController.selection;
+        body: GestureDetector(
+            onDoubleTap: () {
+              pty.kill(ProcessSignal.sigkill);
+            },
+            child: TerminalView(
+              _terminal,
+              controller: _terminalController,
+              autofocus: true,
+              backgroundOpacity: 1.0,
+              /*onSecondaryTapDown: (details, offset) async {
+              final selection = _terminalController.selection;
 
-            if (selection != null) {
-              final text = _terminal.buffer.getText(selection);
-              _terminalController.clearSelection();
-              await Clipboard.setData(ClipboardData(text: text));
-            } else {
-              final data = await Clipboard.getData('text/plain');
-              final text = data?.text;
+              if (selection != null) {
+                final text = _terminal.buffer.getText(selection);
+                _terminalController.clearSelection();
+                await Clipboard.setData(ClipboardData(text: text));
+              } else {
+                final data = await Clipboard.getData('text/plain');
+                final text = data?.text;
 
-              if (text != null) {
-                _terminal.paste(text);
+                if (text != null) {
+                  _terminal.paste(text);
+                }
               }
-            }
-          }*/
-        )
-      )
-    );
+            }*/
+            )));
   }
 }
