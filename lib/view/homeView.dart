@@ -17,14 +17,13 @@ class _HomeViewState extends State<HomeView> {
 
   Terminal _terminal =
       Terminal(maxLines: 10000, platform: TerminalTargetPlatform.android);
-  Pty pty = Pty.start('sh');
+  late Pty pty;
 
   @override
   void initState() {
     super.initState();
 
     WidgetsBinding.instance.endOfFrame.then((_) {
-      pty.kill(ProcessSignal.sigkill);
       if (mounted) _startPty();
     });
   }
